@@ -1,0 +1,8 @@
+numpy
+pandas
+streamlit
+python-dotenv
+fastapi
+mistral-common
+langchain_openai
+langchain-core
