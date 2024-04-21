@@ -6,3 +6,4 @@ fastapi
 mistral-common
 langchain_openai
 langchain-core
+transformers

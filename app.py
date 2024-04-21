@@ -3,13 +3,27 @@ from typing import List
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from main import advanced_tag_list, pipeline, tagging, tags_creation
+from inference import infer
+from llm import advanced_tag_list, pipeline, tagging, tags_creation
 
 app = FastAPI()
 
 
+class TextData(BaseModel):
+    text: str
+
+
 class Articles(BaseModel):
     articles: List[str]
+
+
+@app.post("/infer/")
+async def perform_inference(text_data: TextData):
+    try:
+        tags = infer(text_data.text)
+        return {"tags": tags}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/generate-tags/")

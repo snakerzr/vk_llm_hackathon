@@ -1,41 +1,55 @@
-from main import pipeline
 import streamlit as st
 import pandas as pd
+from inference import infer
+from llm import pipeline
 
+def display_results(title, result, is_list=False):
+    st.write(title)
+    if is_list:
+        if result:
+            # Преобразование списка в строку с элементами, разделенными запятыми
+            formatted_tags = "Тэги: " + ", ".join(result)
+            st.text(formatted_tags)
+        else:
+            st.text("Нет подходящих тэгов")
+    else:
+        # Проверяем, есть ли в DataFrame достаточно столбцов
+        if result.shape[1] >= 2:
+            # Тэги из двух последних столбцов
+            last_two_columns = result.iloc[:, -2:]
+            tags = pd.concat([last_two_columns[col].dropna() for col in last_two_columns]).unique()
+            if len(tags) > 0:
+                formatted_tags = "Тэги: " + ", ".join(tags)
+                st.text(formatted_tags)
+            else:
+                st.text("Нет подходящих тэгов")
+
+            # Подтэги из второго столбца
+            sub_tags = result.iloc[:, 1].dropna().unique()  # Второй столбец для подтэгов
+            if len(sub_tags) > 0:
+                formatted_sub_tags = "Подтэги: " + ", ".join(sub_tags)
+                st.text(formatted_sub_tags)
+            else:
+                st.text("Нет подходящих подтэгов")
+        else:
+            st.text("Недостаточно данных для отображения тэгов")
 
 st.title("Загрузка и обработка данных")
 
-uploaded_file = st.file_uploader("Выберите CSV файл", type="csv")
-text_input = st.text_area("Или введите текст здесь")
+text_input = st.text_area("Введите текст здесь")
 
-if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    if "articles" in data.columns or "Article Text" in data.columns:
-        st.write("CSV файл успешно загружен и содержит необходимый столбец 'articles'.")
-        try:
-            small_result, full_result = pipeline(data["articles"].tolist())
-        except KeyError as k_e:
-            small_result, full_result = pipeline(data["Article Text"].tolist())
-        st.write("Краткий результат:")
-        st.dataframe(small_result)
-        st.write("Полный результат:")
-        st.dataframe(full_result)
-    else:
-        st.error("В файле отсутствует необходимый столбец 'articles'.")
-elif text_input:
-    st.write("Введен текст:")
+if text_input:
+    st.write("Введенный текст:")
     st.write(text_input)
-    small_result, full_result = pipeline([text_input])
 
-    st.write("Главный тэг вар1:")
-    st.header(small_result["tag_with_tags"].values[0])
+    if st.button("Применить модель inference"):
+        result = infer([text_input])  # предполагается, что infer возвращает список
+        display_results("Результат работы модели inference:", result, is_list=True)
 
-    st.write("Главный тэг вар2:")
-    st.header(small_result["tag_with_text"].values[0])
+    if st.button("Применить модель llm"):
+        small_result, full_result = pipeline([text_input])  # предполагается, что pipeline возвращает два DataFrame
+        display_results("Результат работы модели llm:", small_result, is_list=False)
+        # Полный результат можно вывести при необходимости
+        # display_results("Полный результат:", full_result)
 
-    st.write("Уточняющие тэги:")
-    st.text("\n".join(small_result["tags"].astype(str)))
-    st.write("Полный результат:")
-    st.dataframe(full_result)
-
-st.caption("Загрузите файл или введите текст для обработки.")
+st.caption("Введите текст для обработки.")
